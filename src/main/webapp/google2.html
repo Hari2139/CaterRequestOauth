@@ -1,0 +1,98 @@
+<!--https://developers.google.com/identity/sign-in/web/-->
+<html>
+<head>
+	<script src="https://apis.google.com/js/platform.js?onload=onLoadCallback" async defer></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+</head>
+<body>
+<h2>"Google Sign-In API"</h2>
+<h3>Method 2 (Using ClickHandler)</h3>
+<p>
+	<button><a href="/">Home</a></button>
+</p>
+<div style="border:dotted; width: 200px;">
+	<div style="padding-left:5px; padding-right: 5px; padding-bottom:5px;">
+		<p>
+			<a href="#" onclick="signOut();">Sign out</a>
+		</p>
+		<p>
+			<button id="signin-button">Some button</button>
+		</p>
+	</div>
+</div>
+
+<script type="text/javascript">
+	/**
+	 * The Sign-In client object.
+	 */
+	var auth2;
+
+	/**
+	 * Initializes the Sign-In client.
+	 */
+	var initClient = function () {
+		console.log('Inside initClient()');
+		gapi.load('auth2', function () {
+			/**
+			 * Retrieve the singleton for the GoogleAuth library and set up the
+			 * client.
+			 */
+			auth2 = gapi.auth2.init({
+				client_id: '383063704998-6uvuprj3244hbj7cucgh1vvebk218b9p.apps.googleusercontent.com',
+				cookiepolicy: 'single_host_origin', /** Default value **/
+				scope: 'profile email'                /** scope **/
+			});
+
+			// Attach the click handler to the sign-in button
+			auth2.attachClickHandler('signin-button', {}, onSuccess, onFailure);
+		});
+	};
+
+	/**
+	 * Handle successful sign-ins.
+	 */
+	var onSuccess = function (user) {
+		console.log('onSuccess(): Signed in as ' + user.getBasicProfile().getName() + ' ' +
+			user.getBasicProfile().getEmail());
+		var id_token = user.getAuthResponse().id_token;
+		var xhr = new XMLHttpRequest();
+		xhr.open('POST', '/login/gapi');
+		xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+		xhr.onload = function () {
+			if (xhr.status == 200) {
+				console.log('Verified user as: ' + xhr.responseText);
+			}
+			else {
+				console.log('Failed to verify user. Please try again.');
+			}
+		};
+		xhr.onerror = function () {
+			console.log('Failed to make POST request to login.');
+		};
+		xhr.send('token=' + id_token);
+	};
+
+	/**
+	 * Handle sign-in failures.
+	 */
+	var onFailure = function (error) {
+		console.log(error);
+	};
+
+	function signOut() {
+		var auth2 = gapi.auth2.getAuthInstance();
+		//https://developers.google.com/identity/sign-in/web/reference
+		var email = auth2.currentUser.get().getBasicProfile().getEmail();
+		auth2.signOut().then(function () {
+			console.log('User ' + email + ' signed out.');
+		});
+	}
+
+	window.onLoadCallback =
+		function () {
+			console.log("Ready");
+			initClient();
+		};
+</script>
+</body>
+</html>
