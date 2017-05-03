@@ -1,0 +1,88 @@
+<!--https://developers.google.com/identity/sign-in/web/server-side-flow-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js">
+	</script>
+	<script src="https://apis.google.com/js/client:platform.js?onload=start" async defer>
+	</script>
+</head>
+<body>
+<h2>Google Sign-In API</h2>
+<h3>Method 3 (One-time-code flow)</h3>
+<p>
+	<button><a href="/">Home</a></button>
+</p>
+<div style="border:dotted; width: 400px;">
+	<div style="padding-left:5px; padding-right: 5px; padding-bottom:5px;">
+		<p>
+			<a href="#" onclick="signOut();">Sign out</a>
+		</p>
+		<p>
+			<button id="signinButton">Sign in with Google</button>
+		<p id="welcome-message"></p>
+		</p>
+	</div>
+</div>
+
+<script>
+	function start() {
+		gapi.load('auth2', function () {
+			auth2 = gapi.auth2.init({
+				client_id: '383063704998-6uvuprj3244hbj7cucgh1vvebk218b9p.apps.googleusercontent.com',
+				// Scopes to request in addition to 'profile' and 'email'
+				//scope: 'additional_scope'
+			});
+		});
+	}
+
+	$('#signinButton').click(function () {
+		// signInCallback defined in step 6.
+		// signInCallback method is passed a JSON object with an authorization code.
+		auth2.grantOfflineAccess().then(signInCallback);
+	});
+
+	function signInCallback(authResult) {
+		if (authResult['code']) {
+			console.log('Received authorization code: ' + authResult['code']);
+			// Hide the sign-in button now that the user is authorized, for example:
+			$('#signinButton').attr('style', 'display: none');
+
+			// Send the code to the server
+			$.ajax({
+				type: 'POST',
+				url: '/login/googleauthcode',
+				// Always include an `X-Requested-With` header in every AJAX request,
+				// to protect against CSRF attacks.
+				headers: {
+					'X-Requested-With': 'XMLHttpRequest'
+				},
+				contentType: 'application/octet-stream; charset=utf-8',
+				success: function (result) {
+					console.log('Verified user as: ' + result);
+					$('p#welcome-message').html('Welcome ' + result);
+				},
+				error: function (xhr) {
+					console.log(xhr.status + ': Failed to verify user. Please try again.');
+				},
+				processData: false,
+				data: authResult['code']
+			});
+		} else {
+			console.log('Failed to get the authorization code from google server.');
+		}
+	}
+
+	function signOut() {
+		var auth2 = gapi.auth2.getAuthInstance();
+		var email = auth2.currentUser.get().getBasicProfile().getEmail();
+		auth2.signOut().then(function () {
+			console.log('User ' + email + ' signed out.');
+			$('p#welcome-message').html('');
+			$('#signinButton').attr('style', 'display: display');
+		});
+	}
+</script>
+</body>
+</html>
